@@ -1,0 +1,24 @@
+<section id="special" data-transition="fade" style="background:#F3EEE6;color:#1E2A38;font-family:'Nunito Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:24px;font-weight:700;color:#B04A16;letter-spacing:3px;text-transform:uppercase">Specialization</p>
+<h2 style="font-family:'Rubik', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">House rules from three examples</h2>
+</div>
+<div style="display:flex;gap:64px">
+<div style="width:760px;display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'Rubik', Arial, sans-serif;font-size:120px;font-weight:700;line-height:1.1;color:#1F5F8B">73% → 100%</p>
+<p style="font-size:30px;line-height:1.4;color:#4A5563">of planned tasks follow the house rules (6 requests × 3 runs, same model)</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'Rubik', Arial, sans-serif;font-size:120px;font-weight:700;line-height:1.1;color:#1F5F8B">3 → 0</p>
+<p style="font-size:30px;line-height:1.4;color:#4A5563">valid requests wrongly refused, out of 18</p>
+</div>
+</div>
+<p style="font-size:24px;line-height:1.4;color:#4A5563">Same request to both prompts: “Clean Luna’s litter box every night and feed her at 8am and 6pm”</p>
+<table style="font-size:30px;color:#1E2A38;font-family:'Nunito Sans', Arial, sans-serif">
+<tr style="background:#E8E0D3"><th style="width:22%;text-align:left">Prompt</th><th style="width:48%;text-align:left">Task names</th><th style="width:30%;text-align:left">Litter box</th></tr>
+<tr style="background:#FBF8F3"><td>Baseline</td><td>Feed Luna breakfast · Feed Luna dinner</td><td>15 min, medium</td></tr>
+<tr style="background:#E3EEF6"><td><b>Specialized</b></td><td><b>Breakfast · Dinner</b></td><td><b>10 min, low</b></td></tr>
+</table>
+<p style="font-size:24px;line-height:1.4;color:#4A5563">Why it matters: PawPal+ finds and removes tasks by name, so two tasks called “Feed Luna” is a real bug, not a style issue.</p>
+<aside>The second feature is specialization. Instead of fine-tuning, I wrote PawPal+ house rules, like short task names without the pet’s name, and standard durations and priorities, and taught them with three worked examples in the prompt. Same model, same six requests, three runs each: house-rule compliance went from 73 to 100 percent. And a surprise: the baseline prompt refused a normal heart-pill request three times out of three, because my safety rule was too broad. The pill example fixed it: zero wrong refusals. The names matter because PawPal+ finds and removes tasks by name. (About 30 seconds.)</aside>
+</section>

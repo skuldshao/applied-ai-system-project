@@ -1,0 +1,27 @@
+<section id="limits" data-transition="fade" style="background:#F3EEE6;color:#1E2A38;font-family:'Nunito Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:24px;font-weight:700;color:#B04A16;letter-spacing:3px;text-transform:uppercase">Honest limits</p>
+<h2 style="font-family:'Rubik', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">What it can’t do yet, and what’s next</h2>
+</div>
+<div style="display:flex;gap:64px">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFDF9;border:2px solid #E5DED2;border-radius:24px;padding:40px">
+<h3 style="font-family:'Rubik', Arial, sans-serif;font-size:40px;font-weight:600;line-height:1.2;color:#B04A16">Limits today</h3>
+<ul style="font-size:30px;line-height:1.5;color:#1E2A38">
+<li>The dose guard is keyword-based; the model caught what it missed</li>
+<li>Care notes are general, not vet-reviewed, and cover dogs and cats only</li>
+<li>Keyword retrieval misses synonyms (“stroll” vs. “walk”)</li>
+<li>Exact times change from run to run</li>
+</ul>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#E3EEF6;border:2px solid #1F5F8B;border-radius:24px;padding:40px">
+<h3 style="font-family:'Rubik', Arial, sans-serif;font-size:40px;font-weight:600;line-height:1.2;color:#1F5F8B">Next steps</h3>
+<ul style="font-size:30px;line-height:1.5;color:#1E2A38">
+<li>A small classifier for dose questions</li>
+<li>Vet-reviewed notes, more species and breeds</li>
+<li>Embedding search, so wording matters less</li>
+<li>Re-check the plan when the owner clicks Approve</li>
+</ul>
+</div>
+</div>
+<aside>To be honest about the limits: the dose guard is keyword-based, and some wordings get past it; the model’s own refusal caught those, but I’d replace the keywords with a small classifier. My care notes are general, not reviewed by a vet, and only cover dogs and cats. Keyword retrieval can miss a synonym like “stroll”. And because the model has no temperature setting, exact times vary between runs; my evaluation checks behaviour, not exact text. Next I’d add vet-reviewed notes, embedding search, and a re-check when the owner clicks Approve. (About 20 seconds.)</aside>
+</section>

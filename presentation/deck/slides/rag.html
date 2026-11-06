@@ -1,0 +1,27 @@
+<section id="rag" data-transition="fade" style="background:#FBF8F3;color:#1E2A38;font-family:'Nunito Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:24px;font-weight:700;color:#B04A16;letter-spacing:3px;text-transform:uppercase">Retrieval (RAG)</p>
+<h2 style="font-family:'Rubik', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">The right advice for the right pet</h2>
+</div>
+<div style="display:flex;gap:64px;align-items:center">
+<div style="width:720px;display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'Rubik', Arial, sans-serif;font-size:120px;font-weight:700;line-height:1.1;color:#1F5F8B">33% → 100%</p>
+<p style="font-size:30px;line-height:1.4;color:#4A5563">of plans follow the care note they need, without vs. with retrieval (5 requests × 3 runs)</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;background:#FFFDF9;border:2px solid #E5DED2;border-radius:24px;padding:40px">
+<p style="font-size:24px;font-weight:700;color:#B04A16;letter-spacing:2px;text-transform:uppercase">Rocky is 12 years old</p>
+<h3 style="font-size:30px;font-weight:700;line-height:1.4">“Take Rocky for a walk every morning and evening”</h3>
+<div style="display:flex;gap:24px">
+<p style="font-size:30px;font-weight:700;color:#B04A16;width:260px">Without notes</p>
+<p style="font-size:30px">Two 30-minute walks</p>
+</div>
+<div style="display:flex;gap:24px">
+<p style="font-size:30px;font-weight:700;color:#1F5F8B;width:260px">With notes</p>
+<p style="font-size:30px">Two 20-minute walks</p>
+</div>
+<p style="font-size:30px;font-style:italic;line-height:1.4;color:#4A5563">“Rocky is 12, so note [1] applies: each walk is about 20 minutes instead of the house 30.”</p>
+</div>
+</div>
+<p style="font-size:24px;line-height:1.4;color:#4A5563">15 care notes in 3 files, each tagged with species and life stage. Filter to the pets named in the request, rank by TF-IDF, and put the top 3 in the prompt.</p>
+<aside>The first AI feature I measured is retrieval. I wrote 15 short care notes for dogs, cats and medication timing, each tagged with species and life stage. Before planning, the agent keeps only the notes that fit the pets in the request, ranks them, and puts the top three in the prompt. I ran five requests three times each, with retrieval off and on, and checked each plan automatically. Without notes, 33 percent followed the right advice; with notes, 100 percent. My favourite example: 12-year-old Rocky got two 30-minute walks without notes, and two 20-minute walks with them, and the model cites the note it used. (About 35 seconds.)</aside>
+</section>

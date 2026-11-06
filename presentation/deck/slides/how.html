@@ -1,0 +1,52 @@
+<section id="how" data-transition="fade" style="background:#FBF8F3;color:#1E2A38;font-family:'Nunito Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:40px">
+<h2 style="font-family:'Rubik', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">How a request flows</h2>
+<div style="position:relative;width:1664px;height:680px">
+<div style="position:absolute;left:0px;top:40px;width:200px;height:320px;display:flex;flex-direction:column;gap:10px;background:#FFFDF9;border:2px solid #E5DED2;border-radius:20px;padding:16px">
+<x-icon name="Lock" style="color:#1E2A38;width:40px;height:40px"></x-icon>
+<h3 style="font-family:'Rubik', Arial, sans-serif;font-size:30px;font-weight:600;line-height:1.2">1 Guard</h3>
+<p style="font-size:24px;line-height:1.3;color:#4A5563">Blocks dose questions, empty or long input</p>
+</div>
+<div style="position:absolute;left:244px;top:40px;width:200px;height:320px;display:flex;flex-direction:column;gap:10px;background:#FFFDF9;border:2px solid #E5DED2;border-radius:20px;padding:16px">
+<x-icon name="Search" style="color:#1E2A38;width:40px;height:40px"></x-icon>
+<h3 style="font-family:'Rubik', Arial, sans-serif;font-size:30px;font-weight:600;line-height:1.2">2 Retrieve</h3>
+<p style="font-size:24px;line-height:1.3;color:#4A5563">Care notes for this pet’s species and age</p>
+</div>
+<div style="position:absolute;left:488px;top:40px;width:200px;height:320px;display:flex;flex-direction:column;gap:10px;background:#FFFDF9;border:2px solid #1F5F8B;border-radius:20px;padding:16px">
+<x-icon name="Lightbulb" style="color:#1F5F8B;width:40px;height:40px"></x-icon>
+<h3 style="font-family:'Rubik', Arial, sans-serif;font-size:30px;font-weight:600;line-height:1.2">3 Plan</h3>
+<p style="font-size:24px;line-height:1.3;color:#4A5563">Claude Haiku 5.5 drafts tasks as JSON</p>
+</div>
+<div style="position:absolute;left:732px;top:40px;width:200px;height:320px;display:flex;flex-direction:column;gap:10px;background:#FFFDF9;border:2px solid #E5DED2;border-radius:20px;padding:16px">
+<x-icon name="CheckCircle" style="color:#1E2A38;width:40px;height:40px"></x-icon>
+<h3 style="font-family:'Rubik', Arial, sans-serif;font-size:30px;font-weight:600;line-height:1.2">4 Validate</h3>
+<p style="font-size:24px;line-height:1.3;color:#4A5563">Each task through the Task() rules</p>
+</div>
+<div style="position:absolute;left:976px;top:40px;width:200px;height:320px;display:flex;flex-direction:column;gap:10px;background:#FFFDF9;border:2px solid #E5DED2;border-radius:20px;padding:16px">
+<x-icon name="Clock" style="color:#1E2A38;width:40px;height:40px"></x-icon>
+<h3 style="font-family:'Rubik', Arial, sans-serif;font-size:30px;font-weight:600;line-height:1.2">5 Check</h3>
+<p style="font-size:24px;line-height:1.3;color:#4A5563">Scheduler finds clashes and over-budget tasks</p>
+</div>
+<div style="position:absolute;left:1220px;top:40px;width:200px;height:320px;display:flex;flex-direction:column;gap:10px;background:#FFFDF9;border:2px solid #B04A16;border-radius:20px;padding:16px">
+<x-icon name="Settings" style="color:#B04A16;width:40px;height:40px"></x-icon>
+<h3 style="font-family:'Rubik', Arial, sans-serif;font-size:30px;font-weight:600;line-height:1.2">6 Decide</h3>
+<p style="font-size:24px;line-height:1.3;color:#4A5563">Fixable: retry. Owner’s call: stop and ask.</p>
+</div>
+<div style="position:absolute;left:1464px;top:40px;width:200px;height:320px;display:flex;flex-direction:column;gap:10px;background:#E3EEF6;border:2px solid #1F5F8B;border-radius:20px;padding:16px">
+<x-icon name="Users" style="color:#1F5F8B;width:40px;height:40px"></x-icon>
+<h3 style="font-family:'Rubik', Arial, sans-serif;font-size:30px;font-weight:600;line-height:1.2">7 Approve</h3>
+<p style="font-size:24px;line-height:1.3;color:#1E2A38">The owner decides. Nothing is saved before.</p>
+</div>
+<x-connector x1="200" y1="200" x2="244" y2="200" style="color:#4A5563;border-width:3px"></x-connector>
+<x-connector x1="444" y1="200" x2="488" y2="200" style="color:#4A5563;border-width:3px"></x-connector>
+<x-connector x1="688" y1="200" x2="732" y2="200" style="color:#4A5563;border-width:3px"></x-connector>
+<x-connector x1="932" y1="200" x2="976" y2="200" style="color:#4A5563;border-width:3px"></x-connector>
+<x-connector x1="1176" y1="200" x2="1220" y2="200" style="color:#4A5563;border-width:3px"></x-connector>
+<x-connector x1="1420" y1="200" x2="1464" y2="200" style="color:#4A5563;border-width:3px"></x-connector>
+<x-connector x1="1320" y1="360" x2="1320" y2="420" head="none" style="color:#B04A16;border-width:3px"></x-connector>
+<x-connector x1="1320" y1="420" x2="588" y2="420" head="none" style="color:#B04A16;border-width:3px"></x-connector>
+<x-connector x1="588" y1="420" x2="588" y2="360" style="color:#B04A16;border-width:3px"></x-connector>
+<p style="position:absolute;left:608px;top:440px;width:692px;font-size:24px;line-height:1.3;color:#B04A16;font-weight:700">Fix loop: the problems and a free-slot hint go back to the model, at most 2 rounds</p>
+<p style="position:absolute;left:0px;top:560px;width:1664px;font-size:24px;line-height:1.4;color:#4A5563">In: the owner’s request, data.json (pets and today’s schedule) and knowledge/ (15 care notes). Out: a plan with its problems, confidence, care notes used and a full step-by-step trace in logs/agent_trace.md.</p>
+</div>
+<aside>Here is the whole pipeline. One: a guard blocks dose questions and junk input before the AI is called, so those cost nothing. Two: retrieval looks up care notes that match this pet’s species and age. Three: Claude Haiku drafts the tasks as strict JSON. Four: every task is rebuilt with my original Task class, so bad times or durations are rejected. Five: my original scheduler checks for clashes and the time budget. Six: the agent decides. Problems the model can fix, like a clash, go back to it with a hint, at most twice. Problems only the owner can decide, like not enough time, stop right away. Seven: the owner approves or rejects. (About 45 seconds.)</aside>
+</section>

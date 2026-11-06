@@ -490,6 +490,7 @@ main.py                Module 2 terminal demo (no AI)
 tests/                 213 tests (agent, retriever, house rules, evaluation, app, Module 2)
 logs/                  Committed evidence: traces, demo output, evaluation and comparison reports
 diagrams/              architecture.mmd (this system) and the Module 2 class diagrams
+presentation/          The 13-slide final presentation: slide sources and speaker notes
 model_card.md          Model card: evaluation, limitations, misuse, surprises, AI collaboration
 ai_interactions.md     Agent reasoning traces and how I used AI to build the project
 ```

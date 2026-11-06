@@ -1,0 +1,19 @@
+{
+  "v": 4,
+  "createdOnFiles": {"v": 1, "at": "2026-11-05T19:00:00Z"},
+  "lists": "css",
+  "title": "PawPal+ AI Planner",
+  "order": ["cover", "start", "problem", "idea", "how", "demo", "rag", "special", "safety", "evalbug", "learned", "limits", "close"],
+  "sections": {
+    "s1": {"description": "Where I started and the problem with letting an AI plan on its own.", "start": "cover"},
+    "s2": {"description": "The idea and how the system works, with a live demo of the agent fixing its own mistake.", "start": "idea"},
+    "s3": {"description": "Measured results: retrieval, house rules, guardrails and the evaluation that found a bug.", "start": "rag"},
+    "s4": {"description": "What I learned, honest limits, and what this project says about me.", "start": "learned"}
+  },
+  "faces": {
+    "rubik": {"family": "Rubik", "href": "https://fonts.googleapis.com/css2?family=Rubik:wght@400..800&display=swap"},
+    "nunito-sans": {"family": "Nunito Sans", "href": "https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap"},
+    "jetbrains-mono": {"family": "JetBrains Mono", "href": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap"}
+  },
+  "designSystems": []
+}

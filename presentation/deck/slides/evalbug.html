@@ -1,0 +1,24 @@
+<section id="evalbug" data-transition="fade" style="background:#F3EEE6;color:#1E2A38;font-family:'Nunito Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:24px;font-weight:700;color:#B04A16;letter-spacing:3px;text-transform:uppercase">Evaluation</p>
+<h2 style="font-family:'Rubik', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">My own evaluation found a real bug</h2>
+</div>
+<div style="display:flex;gap:24px;align-items:center">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFDF9;border:2px solid #B04A16;border-radius:24px;padding:40px">
+<h3 style="font-family:'Rubik', Arial, sans-serif;font-size:40px;font-weight:600;line-height:1.2;color:#B04A16">First run: 11/12</h3>
+<p style="font-size:30px;line-height:1.4">“Brush Luna at 9:30am” during a vet visit: the model dropped the task, and my planner said “nothing to plan”. It passed once and failed once.</p>
+</div>
+<x-connector style="width:56px;color:#4A5563;border-width:3px"></x-connector>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFDF9;border:2px solid #E5DED2;border-radius:24px;padding:40px">
+<h3 style="font-family:'Rubik', Arial, sans-serif;font-size:40px;font-weight:600;line-height:1.2">The fix</h3>
+<p style="font-size:30px;line-height:1.4">An empty plan is now a fixable problem: ask once more to move the task to the nearest free time. Two retries wasted calls, so I measured and kept one.</p>
+</div>
+<x-connector style="width:56px;color:#4A5563;border-width:3px"></x-connector>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#E3EEF6;border:2px solid #1F5F8B;border-radius:24px;padding:40px">
+<h3 style="font-family:'Rubik', Arial, sans-serif;font-size:40px;font-weight:600;line-height:1.2;color:#1F5F8B">Now: 13/13 cases</h3>
+<p style="font-size:30px;line-height:1.4">39 of 39 runs pass, and every case gives the same result 3 times in a row. Plus 213 offline tests.</p>
+</div>
+</div>
+<p style="font-size:24px;line-height:1.4;color:#4A5563">I kept the failing report in the repo as evidence: logs/eval_results_before_fix.md</p>
+<aside>To prove reliability, I wrote an evaluation script: 12 fixed requests, now 13, each run three times through the real agent and checked automatically. The first run scored 11 out of 12, and that was a real bug. When I asked to brush Luna during a vet visit, the model sometimes dropped the task instead of moving it, and my planner treated the empty plan as “nothing to plan”. It passed once and failed once, which is why repeating every case matters. Now an empty plan goes back to the model once. I measured that two retries wasted calls, so I kept one. Today it’s 13 out of 13 cases, 39 out of 39 runs, all consistent. (About 35 seconds.)</aside>
+</section>

@@ -1,0 +1,31 @@
+<section id="demo" data-transition="fade" style="background:#F3EEE6;color:#1E2A38;font-family:'Nunito Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:24px;font-weight:700;color:#B04A16;letter-spacing:3px;text-transform:uppercase">Live demo</p>
+<h2 style="font-family:'Rubik', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">The agent catches its own clash</h2>
+</div>
+<p style="font-size:30px;line-height:1.4;color:#4A5563"><b>“Luna needs her eye drops at 7am and 9pm, and brush her this evening”</b> · Mochi already has breakfast at 7:00</p>
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;gap:32px;align-items:center">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:30px;font-weight:600;width:240px;background:#E8E0D3;color:#1E2A38;padding:12px 24px;border-radius:16px">Plan</p>
+<p style="font-size:30px;line-height:1.4">Keeps the owner’s time: eye drops at 07:00</p>
+</div>
+<div style="display:flex;gap:32px;align-items:center">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:30px;font-weight:600;width:240px;background:#E3EEF6;color:#1F5F8B;padding:12px 24px;border-radius:16px">Check</p>
+<p style="font-size:30px;line-height:1.4">07:00 overlaps Mochi’s breakfast; next free slot is 07:15</p>
+</div>
+<div style="display:flex;gap:32px;align-items:center">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:30px;font-weight:600;width:240px;background:#F6DCC8;color:#8A3A10;padding:12px 24px;border-radius:16px">Fix</p>
+<p style="font-size:30px;line-height:1.4">Sends the plan and the problem back (round 1 of 2)</p>
+</div>
+<div style="display:flex;gap:32px;align-items:center">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:30px;font-weight:600;width:240px;background:#E8E0D3;color:#1E2A38;padding:12px 24px;border-radius:16px">Revise</p>
+<p style="font-size:30px;line-height:1.4">Moves the drops to 07:15</p>
+</div>
+<div style="display:flex;gap:32px;align-items:center">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:30px;font-weight:600;width:240px;background:#E3EEF6;color:#1F5F8B;padding:12px 24px;border-radius:16px">Check</p>
+<p style="font-size:30px;line-height:1.4"><b>No conflicts: ok, in 2 model calls</b></p>
+</div>
+</div>
+<p style="font-size:24px;line-height:1.4;color:#4A5563">Every step shows live in the app and is saved to logs/agent_trace.md.</p>
+<aside>Now the live demo. Switch to the app: streamlit run app.py. Show Mochi and Luna, with Mochi’s breakfast at 7:00 already scheduled (or run python demo.py, which plans request 1 first). Type: Luna needs her eye drops at 7am and 9pm, and brush her this evening. While the steps appear, point out: the model keeps the owner’s 7:00, the scheduler catches the clash with Mochi’s breakfast and suggests 07:15, the plan goes back to the model, it moves the drops to 07:15, and the second check passes. Open the trace expander, then click Approve and show the schedule. If the live call is slow or behaves differently, this slide is the recorded run from logs/demo_output.txt. (About 60 seconds.)</aside>
+</section>
