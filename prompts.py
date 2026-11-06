@@ -178,22 +178,29 @@ def _quoted_request(request: str) -> str:
     return f'Owner\'s request:\n"""\n{request}\n"""'
 
 
-def build_plan_prompt(owner: Owner, request: str, today: date) -> str:
-    """Build the first prompt: context plus the owner's request."""
-    return f"{describe_context(owner, today)}\n\n{_quoted_request(request)}\n\nPlan the tasks for this request."
+def _with_notes(notes: str) -> str:
+    # Retrieved care notes (retriever.format_notes) go between the context and the request.
+    return f"{notes}\n\n" if notes else ""
+
+
+def build_plan_prompt(owner: Owner, request: str, today: date, notes: str = "") -> str:
+    """Build the first prompt: context, any retrieved care notes, then the owner's request."""
+    return (f"{describe_context(owner, today)}\n\n{_with_notes(notes)}{_quoted_request(request)}"
+            "\n\nPlan the tasks for this request.")
 
 
 def build_fix_prompt(
-    owner: Owner, request: str, previous_reply: str, problems: List[str], today: date
+    owner: Owner, request: str, previous_reply: str, problems: List[str], today: date,
+    notes: str = "",
 ) -> str:
     """Build a fix prompt: the earlier draft plus the problems the scheduler found in it.
 
-    Each fix is a fresh request that carries everything the model needs, so no chat history
-    is kept between calls.
+    Each fix is a fresh request that carries everything the model needs (including the same
+    care notes), so no chat history is kept between calls.
     """
     problem_lines = "\n".join(f"- {message}" for message in problems)
     return (
-        f"{describe_context(owner, today)}\n\n{_quoted_request(request)}\n\n"
+        f"{describe_context(owner, today)}\n\n{_with_notes(notes)}{_quoted_request(request)}\n\n"
         f"Your previous plan:\n{previous_reply}\n\n"
         f"The PawPal+ scheduler checked that plan and found these problems:\n{problem_lines}\n\n"
         "Return the complete corrected plan (every task, not only the changed ones). "

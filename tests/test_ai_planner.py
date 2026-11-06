@@ -57,7 +57,7 @@ def test_clean_plan_is_ok_after_one_call(owner):
     assert [(p.pet_name, p.task.description, p.task.start_time) for p in result.tasks] == [
         ("Mochi", "Walk", time(8, 0)), ("Luna", "Feed", time(9, 0))]  # "luna" -> canonical "Luna"
     assert result.confidence == 0.9 and result.summary == "test summary"
-    assert steps(result) == ["Guard", "Plan", "Validate", "Check", "Result"]
+    assert steps(result) == ["Guard", "Retrieve", "Plan", "Validate", "Check", "Result"]
 
 
 def test_on_step_sees_every_step_as_it_happens(owner):
@@ -263,7 +263,8 @@ def test_save_trace_appends_markdown_runs(owner, tmp_path):
     assert text.startswith("# Agent trace")
     assert text.count("## ") == 2  # one section per run
     assert "Walk Mochi \\| at 8" in text  # pipes escaped so the tables stay intact
-    assert "| 2 | 🧠 Plan |" in text
+    assert "| 2 | 📚 Retrieve |" in text and "| 3 | 🧠 Plan |" in text
+    assert "**Care notes:** " in text
     assert "| Mochi | Walk | 08:00-08:30 | 30 | medium | once |" in text
 
 

@@ -148,6 +148,8 @@ def show_plan(result: PlanResult) -> None:
         c4.metric("Confidence", f"{result.confidence:.0%}")
         if result.summary:
             st.markdown(f"💬 {result.summary}")
+        if result.notes:
+            st.caption("📚 Care notes used: " + " · ".join(result.notes))
         st.table([
             {
                 "Time": p.task.time_window(),
@@ -182,8 +184,9 @@ def show_plan(result: PlanResult) -> None:
 st.subheader("🤖 AI Planner")
 st.caption(
     "Describe what your pets need, e.g. *Feed Mochi at 7am and 6pm, and give him his heart pill "
-    "with breakfast*. The AI drafts tasks using PawPal+'s house rules, the scheduler checks them "
-    "for clashes and time, and you approve before anything is saved."
+    "with breakfast*. The AI looks up matching pet-care notes, drafts tasks using PawPal+'s house "
+    "rules, the scheduler checks them for clashes and time, and you approve before anything is "
+    "saved."
 )
 if "ai_flash" in st.session_state:
     st.success(st.session_state.pop("ai_flash"))

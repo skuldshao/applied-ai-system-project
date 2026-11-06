@@ -2,7 +2,8 @@
 
 The agent loop, one step per trace line:
   🛡️ Guard     block empty, overly long or medication-dose requests before any model call
-  🧠 Plan      Claude drafts the tasks as JSON (structured outputs)
+  📚 Retrieve  find the care notes in knowledge/ that apply to the request and its pets (RAG)
+  🧠 Plan      Claude drafts the tasks as JSON (structured outputs), using those notes
   ✅ Validate  every task goes through Task(), so bad times, durations and pets are caught
   🔍 Check     the existing Scheduler looks for time conflicts and an overflowing time budget
   🤔 Decide    fixable problems go back to Claude; problems that need the owner stop the loop
@@ -26,6 +27,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from llm_client import LLMClient, LLMError
 from pawpal_system import Owner, Scheduler, Task
 from prompts import PLAN_SCHEMA, build_fix_prompt, build_plan_prompt, get_system_prompt
+from retriever import KnowledgeBase, default_knowledge, format_notes
 
 logger = logging.getLogger("pawpal.agent")
 
@@ -107,6 +109,8 @@ class PlanResult:
     model: str = ""
     # "specialized" (house rules + examples) or "baseline"
     prompt_mode: str = "specialized"
+    retrieval: bool = True  # whether care notes were looked up (False only for comparisons)
+    notes: List[str] = field(default_factory=list)  # citations of the care notes sent to the model
     trace: List[TraceStep] = field(default_factory=list)
 
     @property
@@ -256,6 +260,8 @@ def plan_request(
     max_fix_rounds: int = MAX_FIX_ROUNDS,
     specialized: bool = True,
     on_step: Optional[Callable[[TraceStep], None]] = None,
+    use_knowledge: bool = True,
+    knowledge: Optional[KnowledgeBase] = None,
 ) -> PlanResult:
     """Plan → validate → check → fix, until the plan is clean or only the owner can decide.
 
@@ -269,13 +275,17 @@ def plan_request(
             False sends the baseline prompt, for comparison.
         on_step: Called with each TraceStep as soon as it happens, so a UI can show the
             agent's progress live instead of waiting for the whole run.
+        use_knowledge: True (the default) retrieves care notes and puts them in the prompt;
+            False skips retrieval, for before/after comparisons.
+        knowledge: The knowledge base to search. Defaults to the notes in knowledge/.
 
     Returns:
         A PlanResult with the proposed tasks, any problems left, and the full trace.
     """
     today = today or date.today()
     result = PlanResult(request=request, model=getattr(client, "model", "unknown"),
-                        prompt_mode="specialized" if specialized else "baseline")
+                        prompt_mode="specialized" if specialized else "baseline",
+                        retrieval=use_knowledge)
     system_prompt = get_system_prompt(specialized)
 
     def step(icon: str, name: str, detail: str) -> None:
@@ -293,7 +303,14 @@ def plan_request(
     step("🛡️", "Guard", "Request passed the input checks.")
 
     request = request.strip()
-    prompt = build_plan_prompt(owner, request, today)
+    notes_text = ""
+    if use_knowledge:
+        notes = (knowledge or default_knowledge()).retrieve(request, owner)
+        result.notes = [note.citation() for note in notes]
+        notes_text = format_notes(notes)
+        step("📚", "Retrieve", f"{len(notes)} care note(s) for this request: "
+             + "; ".join(result.notes) if notes else "No care notes match this request.")
+    prompt = build_plan_prompt(owner, request, today, notes_text)
     try:
         while True:
             reply = client.complete(system_prompt, prompt, PLAN_SCHEMA)
@@ -354,8 +371,8 @@ def plan_request(
             result.fix_rounds += 1
             step("🔧", "Fix", f"Round {result.fix_rounds} of {max_fix_rounds}: {len(fixable)} "
                  "fixable problem(s), so send the plan and the problems back to the model.")
-            prompt = build_fix_prompt(owner, request, reply, [
-                                      p.message for p in problems], today)
+            prompt = build_fix_prompt(owner, request, reply, [p.message for p in problems],
+                                      today, notes_text)
     except LLMError as err:
         step("❌", "Error", str(err))
         result.status, result.message = "error", str(err)
@@ -419,6 +436,7 @@ def format_trace(result: PlanResult) -> str:
         "",
         f"**Request:** {_cell(result.request)}  ",
         f"**Model:** {result.model} · **Prompt:** {result.prompt_mode} · "
+        f"**Care notes:** {len(result.notes) if result.retrieval else 'off'} · "
         f"**Model calls:** {result.llm_calls} · "
         f"**Fix rounds:** {result.fix_rounds} · **Confidence:** {result.confidence:.2f}",
         "",

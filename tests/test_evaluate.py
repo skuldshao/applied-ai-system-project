@@ -55,6 +55,16 @@ def test_expect_reports_broken_house_rules():
     assert any("No pet name" in f for f in fails)
 
 
+def test_expect_checks_task_minutes_and_retrieved_notes():
+    result = plan(tasks=[proposed(dur=30)])
+    result.notes = ["Walks for adult dogs (dogs.md)"]
+    fails = expect(max_minutes=20, note="Walks for senior dogs")(result, sample_owner())
+    assert fails == ["a task is longer than 20 minutes",
+                     "care note 'Walks for senior dogs' was not retrieved"]
+    result.notes.append("Walks for senior dogs (dogs.md)")
+    assert expect(note="Walks for senior dogs")(result, sample_owner()) == []
+
+
 def test_expect_finds_reported_problem_kinds():
     result = plan(status="needs_review", problems=[Problem("over_budget", "too long")])
     assert expect(problem="over_budget")(result, sample_owner()) == []
