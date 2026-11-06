@@ -60,6 +60,13 @@ def test_clean_plan_is_ok_after_one_call(owner):
     assert steps(result) == ["Guard", "Plan", "Validate", "Check", "Result"]
 
 
+def test_on_step_sees_every_step_as_it_happens(owner):
+    seen = []
+    result = plan_request(owner, "Walk Mochi at 8", FakeLLM([draft(task())]), today=TODAY,
+                          on_step=seen.append)
+    assert seen == result.trace
+
+
 def test_plan_prompt_includes_context_and_quoted_request(owner):
     owner.pets[0].add_task(Task("Breakfast", "07:00", 15, due_date=TODAY))
     fake = FakeLLM([draft(task())])
@@ -147,7 +154,7 @@ def test_over_budget_stops_without_asking_the_model_again(owner):
     assert result.status == "needs_review"
     assert result.llm_calls == 1  # not fixable by the model, so no wasted calls
     assert [p.kind for p in result.problems] == ["over_budget"]
-    assert "doesn't fit: only 0 of the owner's 30 minutes" in result.problems[0].message
+    assert "doesn't fit: with this plan, only 0 of the owner's 30 minutes" in result.problems[0].message
 
 
 def test_plan_that_pushes_out_an_existing_task_is_flagged(owner):

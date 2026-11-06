@@ -17,7 +17,7 @@ from pawpal_system import Task
 # ("teeth" before "brush", so "Brush teeth" gets 🦷 and "Brush fur" gets 🧼).
 # Every emoji is a single character that terminals draw two columns wide, so tables line up.
 TASK_EMOJIS = [
-    (("med", "pill", "flea", "treatment", "vaccine"), "💊"),
+    (("med", "pill", "drops", "insulin", "flea", "treatment", "vaccine"), "💊"),
     (("teeth", "dental"), "🦷"),
     (("walk", "jog", "hike"), "🦮"),
     (("breakfast", "dinner", "lunch", "feed", "food", "meal", "treat"), "🍖"),

@@ -21,7 +21,7 @@ import re
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from llm_client import LLMClient, LLMError
 from pawpal_system import Owner, Scheduler, Task
@@ -220,8 +220,9 @@ def check_schedule(owner: Owner, proposals: List[ProposedTask], today: date) -> 
         if id(task) in new_tasks:
             problems.append(Problem(
                 "over_budget",
-                f"'{task.description}' ({task.duration_minutes} min) doesn't fit: only {left} of "
-                f"the owner's {trial.available_minutes} minutes are left today."))
+                f"'{task.description}' ({task.duration_minutes} min) doesn't fit: with this "
+                f"plan, only {left} of the owner's {trial.available_minutes} minutes are left "
+                "today."))
         elif _key(pet.name, task) in before:
             problems.append(Problem(
                 "over_budget",
@@ -240,6 +241,7 @@ def plan_request(
     today: Optional[date] = None,
     max_fix_rounds: int = MAX_FIX_ROUNDS,
     specialized: bool = True,
+    on_step: Optional[Callable[[TraceStep], None]] = None,
 ) -> PlanResult:
     """Plan → validate → check → fix, until the plan is clean or only the owner can decide.
 
@@ -251,6 +253,8 @@ def plan_request(
         max_fix_rounds: How many times the model may revise its plan.
         specialized: True (the default) sends the house rules and few-shot examples;
             False sends the baseline prompt, for comparison.
+        on_step: Called with each TraceStep as soon as it happens, so a UI can show the
+            agent's progress live instead of waiting for the whole run.
 
     Returns:
         A PlanResult with the proposed tasks, any problems left, and the full trace.
@@ -261,8 +265,11 @@ def plan_request(
     system_prompt = get_system_prompt(specialized)
 
     def step(icon: str, name: str, detail: str) -> None:
-        result.trace.append(TraceStep(icon, name, detail))
+        trace_step = TraceStep(icon, name, detail)
+        result.trace.append(trace_step)
         logger.info("%s %s: %s", icon, name, detail)
+        if on_step is not None:
+            on_step(trace_step)
 
     blocked = check_request(request, owner)
     if blocked:

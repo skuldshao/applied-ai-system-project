@@ -3,47 +3,24 @@ from pathlib import Path
 
 import streamlit as st
 
+from ai_planner import PlanResult, TraceStep, apply_plan, plan_request, save_trace
 from formatting import STATUS_BADGE, priority_badge, status_badge, task_label
+from llm_client import ClaudeClient, LLMError
+from pawpal_logging import setup_logging
 from pawpal_system import Owner, Pet, Scheduler, Task
 
 # Saved next to app.py, so the same file is used no matter which folder the app starts from.
 DATA_FILE = Path(__file__).parent / "data.json"
 
+setup_logging()  # logs/pawpal.log; safe to call on every rerun
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
 st.title("🐾 PawPal+")
-
-st.markdown(
-    """
-Welcome to the PawPal+ starter app.
-
-This file is intentionally thin. It gives you a working Streamlit app so you can start quickly,
-but **it does not implement the project logic**. Your job is to design the system and build it.
-
-Use this app as your interactive demo once your backend classes/functions exist.
-"""
+st.caption(
+    "Plan your pets' day. Add tasks yourself, or describe what your pets need and let the "
+    "🤖 AI Planner draft them. PawPal+ checks every AI plan for clashes and for time, and "
+    "nothing the AI suggests is saved until you approve it."
 )
-
-with st.expander("Scenario", expanded=True):
-    st.markdown(
-        """
-**PawPal+** is a pet care planning assistant. It helps a pet owner plan care tasks
-for their pet(s) based on constraints like time, priority, and preferences.
-
-You will design and implement the scheduling logic and connect it to this Streamlit UI.
-"""
-    )
-
-with st.expander("What you need to build", expanded=True):
-    st.markdown(
-        """
-At minimum, your system should:
-- Represent pet care tasks (what needs to happen, how long it takes, priority)
-- Represent the pet and the owner (basic info and preferences)
-- Build a plan/schedule for a day that chooses and orders tasks based on constraints
-- Explain the plan (why each task was chosen and when it happens)
-"""
-    )
 
 st.divider()
 
@@ -131,6 +108,112 @@ if owner.pets:
     )
 else:
     st.info("No pets yet. Add one above.")
+
+st.divider()
+
+# --- AI Planner ------------------------------------------------------------------
+# The owner types a request in plain English. ai_planner.plan_request() drafts tasks with
+# Claude, checks them with the same Scheduler used further down this page, sends fixable
+# problems back to Claude, and returns a plan. The plan is kept in session_state (Streamlit
+# reruns on every click) and nothing is saved until the owner clicks Approve.
+
+STATUS_HEADLINES = {
+    "ok": "✅ Plan ready for your approval",
+    "needs_review": "⚠️ Plan needs your review",
+    "refused": "🛡️ Request not planned",
+    "error": "❌ The AI Planner hit an error",
+}
+
+
+@st.cache_resource
+def planner_client() -> ClaudeClient:
+    """One Claude client for the app (reads ANTHROPIC_API_KEY from .env)."""
+    return ClaudeClient()
+
+
+def show_plan(result: PlanResult) -> None:
+    """Show a finished plan: numbers, proposed tasks, problems, Approve/Reject, and the trace."""
+    if result.status in ("refused", "error"):
+        (st.info if result.status == "refused" else st.error)(
+            f"{STATUS_HEADLINES[result.status]}: {result.message}")
+        if st.button("Clear"):
+            del st.session_state.ai_result
+            st.rerun()
+    else:
+        st.markdown(f"**{STATUS_HEADLINES[result.status]}**")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Tasks", len(result.tasks))
+        c2.metric("Model calls", result.llm_calls)
+        c3.metric("Fix rounds", result.fix_rounds)
+        c4.metric("Confidence", f"{result.confidence:.0%}")
+        if result.summary:
+            st.markdown(f"💬 {result.summary}")
+        st.table([
+            {
+                "Time": p.task.time_window(),
+                "Pet": p.pet_name,
+                "Task": task_label(p.task),
+                "Minutes": p.task.duration_minutes,
+                "Priority": priority_badge(p.task.priority),
+                "Repeats": p.task.frequency,
+            }
+            for p in result.tasks
+        ])
+        for problem in result.problems:
+            st.warning(problem.message)
+        approve, reject = st.columns(2)
+        label = "✅ Approve and add" if result.status == "ok" else "⚠️ Approve anyway"
+        if approve.button(label, type="primary"):
+            added = apply_plan(owner, result)
+            save()
+            st.session_state.ai_flash = f"Added {added} task(s) from the AI plan."
+            del st.session_state.ai_result
+            st.rerun()
+        if reject.button("🗑️ Reject"):
+            st.session_state.ai_flash = "Plan discarded. Nothing was changed."
+            del st.session_state.ai_result
+            st.rerun()
+    with st.expander("🧠 How the AI got here (agent trace)"):
+        st.table([{"Step": f"{s.icon} {s.name}", "What happened": s.detail} for s in result.trace])
+        st.caption(f"Model: {result.model} · prompt: {result.prompt_mode} · "
+                   "every run is also saved to logs/agent_trace.md")
+
+
+st.subheader("🤖 AI Planner")
+st.caption(
+    "Describe what your pets need, e.g. *Feed Mochi at 7am and 6pm, and give him his heart pill "
+    "with breakfast*. The AI drafts tasks using PawPal+'s house rules, the scheduler checks them "
+    "for clashes and time, and you approve before anything is saved."
+)
+if "ai_flash" in st.session_state:
+    st.success(st.session_state.pop("ai_flash"))
+
+if not owner.pets:
+    st.caption("Add a pet first, then the AI Planner can plan for it.")
+else:
+    try:
+        client = planner_client()
+    except LLMError as err:
+        client = None
+        st.error(f"{err} The rest of PawPal+ still works without it.")
+    if client is not None:
+        with st.form("ai_planner"):
+            ai_request = st.text_area("What do your pets need?", height=80,
+                                      placeholder="Walk Mochi at 7am and brush Luna this evening")
+            submitted = st.form_submit_button("✨ Plan it", type="primary")
+        if submitted:
+            with st.status("🤖 Planning…", expanded=True) as status:
+
+                def show_step(step: TraceStep) -> None:
+                    st.write(f"{step.icon} **{step.name}** · {step.detail}")
+
+                result = plan_request(owner, ai_request, client, on_step=show_step)
+                save_trace(result)
+                status.update(label=STATUS_HEADLINES[result.status], expanded=False,
+                              state="error" if result.status == "error" else "complete")
+            st.session_state.ai_result = result
+        if "ai_result" in st.session_state:
+            show_plan(st.session_state.ai_result)
 
 st.divider()
 
