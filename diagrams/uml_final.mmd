@@ -1,0 +1,72 @@
+classDiagram
+    %% PawPal+ final class diagram — matches pawpal_system.py
+    %% Owner -> Pet -> Task hold the data; Scheduler reads everything through Owner.
+
+    class Task {
+        +str description
+        +time start_time
+        +int duration_minutes = 15
+        +str priority = "medium"
+        +str frequency = "once"
+        +bool completed = False
+        +date due_date = today
+        +start_minute() int
+        +end_minute() int
+        +time_window() str
+        +mark_complete() None
+        +mark_incomplete() None
+        +next_occurrence(today) Task
+        -__post_init__() None
+    }
+
+    class Pet {
+        +str name
+        +str species
+        +int age = 0
+        +List~Task~ tasks
+        +add_task(task) None
+        +remove_task(description) bool
+        +find_task(description, pending_only) Task
+    }
+
+    class Owner {
+        +str name
+        +int available_minutes = 120
+        +List~Pet~ pets
+        +add_pet(pet) None
+        +remove_pet(name) bool
+        +find_pet(name) Pet
+        +get_all_tasks() List~PetTask~
+    }
+
+    class Scheduler {
+        +Owner owner
+        +get_tasks(pet_name, completed) List~PetTask~
+        +sort_by_time(tasks)$ List~PetTask~
+        +sort_by_priority(tasks)$ List~PetTask~
+        +due_tasks(today) List~PetTask~
+        +todays_schedule(today) List~PetTask~
+        +skipped_tasks(today) List~PetTask~
+        +find_conflicts(today) List~ConflictPair~
+        +conflict_warnings(today) List~str~
+        +mark_task_complete(pet_name, description, today) bool
+    }
+
+    class pawpal_system {
+        <<module>>
+        +dict PRIORITY_RANK
+        +tuple FREQUENCIES
+        +dict RECURRENCE_STEP
+        +parse_time(value) time
+    }
+
+    note for Scheduler "PetTask = (Pet, Task) pair\nConflictPair = (PetTask, PetTask)"
+
+    Owner "1" *-- "0..*" Pet : owns
+    Pet "1" *-- "0..*" Task : has
+    Scheduler "1" --> "1" Owner : reads all tasks via get_all_tasks()
+    Scheduler ..> Pet : returns (pet, task) pairs
+    Scheduler ..> Task : sorts, filters, completes
+    Task ..> Task : next_occurrence() creates
+    Task ..> pawpal_system : validates with PRIORITY_RANK, parse_time()
+    Scheduler ..> pawpal_system : sorts with PRIORITY_RANK

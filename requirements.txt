@@ -1,0 +1,4 @@
+streamlit>=1.30
+pytest>=7.0
+tabulate>=0.9
+wcwidth>=0.2

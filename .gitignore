@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Virtual environment
+.venv/
+
+# Secrets (API keys go in .env, never in git)
+.env
+
+# App data written at runtime by Owner.save_to_json()
+data.json
+data.json.tmp
+
+# Runtime debug log (evidence logs in logs/*.md and *.txt are committed)
+logs/*.log
+
+# macOS
+.DS_Store
