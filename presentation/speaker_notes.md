@@ -7,7 +7,7 @@ speaker notes in `deck/slides/`. Times are targets.
 
 ### 1. PawPal+ AI Planner
 
-Hi, I’m [your name]. This is PawPal+ AI Planner, my final project. It extends PawPal+, the pet-care scheduler I built in Module 2. In the next six minutes I’ll show where I started, why letting an AI plan on its own is risky, how my system checks the AI, a live demo, and the numbers that show it works. (About 20 seconds.)
+Hi, I’m Wanru. This is PawPal+ AI Planner, my final project. It extends PawPal+, the pet-care scheduler I built in Module 2. In the next six minutes I’ll show where I started, why letting an AI plan on its own is risky, how my system checks the AI, a live demo, and the numbers that show it works. (About 20 seconds.)
 
 ### 2. PawPal+ (Module 2): no AI yet
 
