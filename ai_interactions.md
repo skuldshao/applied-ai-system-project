@@ -1,10 +1,107 @@
 # AI Interactions Log
 
-> **Stretch features only.** Only fill in the sections that apply to stretch features you attempted. If you did not attempt a stretch feature, leave its section blank or delete it. This file is not required for the core project.
+This file records the AI side of **PawPal+ AI Planner**, my final project:
+
+1. the AI Planner agent's saved **reasoning traces** (the Agentic Workflow stretch feature);
+2. where the other evaluation logs are;
+3. how I used an AI coding assistant to build the project, step by step.
+
+The log from the original **Module 2** PawPal+ project is kept at the end as an appendix.
 
 ---
 
-## Agent Workflow (SF7)
+## 1. Agent reasoning traces
+
+Every time the AI Planner runs, it records each intermediate step it took and why.
+`ai_planner.save_trace()` appends the run to **[logs/agent_trace.md](logs/agent_trace.md)**, which is
+committed to the repo. Each run in that file has:
+
+- the request, the model, the prompt mode, how many care notes were retrieved, the number of model
+  calls and fix rounds, and the model's confidence;
+- a table with one row per step: 🛡️ Guard → 📚 Retrieve → 🧠 Plan → ✅ Validate → 🔍 Check →
+  🤔 Decide → 🔧 Fix → 🧠 Revise → 🏁 Result. The Plan and Revise rows quote the model's own
+  `reasoning` field, including which retrieved notes it used (`[1]`, `[2]`, …);
+- the proposed tasks, the model's summary, and any problems left for the owner.
+
+`python demo.py` regenerates the file with five runs. The Streamlit app appends a run each time the
+owner clicks **Plan it**, and the same steps also go to `logs/pawpal.log`.
+
+### Example: a conflict found and fixed by the agent (live, `python demo.py`, request 2)
+
+Mochi already had breakfast at 07:00 when the owner asked for Luna's eye drops "at 7am". The model
+kept the owner's time, the scheduler caught the clash and suggested a free slot, and the model
+revised its own plan:
+
+**Request:** Luna needs her eye drops at 7am and 9pm, and brush her this evening  
+**Model:** claude-haiku-5-5 · **Prompt:** specialized · **Care notes:** 3 · **Model calls:** 2 · **Fix rounds:** 1 · **Confidence:** 0.90
+
+| # | Step | What happened |
+|---|------|---------------|
+| 1 | 🛡️ Guard | Request passed the input checks. |
+| 2 | 📚 Retrieve | 3 care note(s) for this request: Eye and ear drops (medication.md); Grooming adult cats (cats.md); Play for cats (cats.md) |
+| 3 | 🧠 Plan | 3 task(s) drafted, confidence 0.90. Reasoning: Luna's eye drops are medication, so they use the house 5 minutes and high priority, repeating daily at the owner's 07:00 and 21:00. Note [1] applies, but Luna has only one kind of drop, so no gap is needed. The brushing has no time given, so it goes at 19:00 to avoid Mochi's 18:00 dinner, for the house 15 minutes at low priority, once. |
+| 4 | ✅ Validate | 3 task(s) valid, 0 rejected. |
+| 5 | 🔍 Check | 1 issue(s). 'Morning eye drops' 07:00-07:05 overlaps 'Breakfast' 07:00-07:10. The next free slot for 'Morning eye drops' is 07:15. |
+| 6 | 🔧 Fix | Round 1 of 2: 1 fixable problem(s), so send the plan and the problems back to the model. |
+| 7 | 🧠 Revise | 3 task(s) drafted, confidence 0.90. Reasoning: The morning eye drops move from 07:00 to 07:15, the next free slot after Mochi's breakfast and heart pill, keeping the house 5 minutes at high priority. Note [1] applies, but Luna has only one kind of drop, so no gap is needed. The other tasks stay as they were, and the total of 25 minutes fits within the 65 minutes left. |
+| 8 | ✅ Validate | 3 task(s) valid, 0 rejected. |
+| 9 | 🔍 Check | No conflicts, and everything fits in today's time. |
+| 10 | ✅ Result | ok: 3 task(s), 0 problem(s) left, 2 model call(s). |
+
+| Pet | Task | Time | Minutes | Priority | Repeats |
+|---|---|---|---|---|---|
+| Luna | Morning eye drops | 07:15-07:20 | 5 | high | daily |
+| Luna | Evening eye drops | 21:00-21:05 | 5 | high | daily |
+| Luna | Brushing | 19:00-19:15 | 15 | low | once |
+
+### What the other saved runs show
+
+The other four runs in [logs/agent_trace.md](logs/agent_trace.md) cover the other branches of the
+decision chain:
+
+| Run | Request | Decision chain |
+|---|---|---|
+| 1 | Feed Mochi at 7am and 6pm, and give him his heart pill with breakfast | Guard → Retrieve (pills with food, feeding dogs) → Plan → Validate → Check: clean → **ok** in 1 call |
+| 3 | Take Mochi for a 60 minute walk at 10am and play fetch with him for 45 minutes at 4pm | … → Check: over the time budget → **Decide: stop**, because only the owner can choose what to drop → **needs_review** in 1 call (no wasted retries) |
+| 4 | How much Benadryl can I give Mochi? | **Guard blocks** it as a dose question → refused with 0 model calls |
+| 5 | Write me a poem about cats | Guard passes → Retrieve: no notes → **the model refuses** as off-topic |
+
+## 2. Other evaluation logs
+
+| File | What it holds | Made by |
+|---|---|---|
+| [logs/demo_output.txt](logs/demo_output.txt) | Full terminal output of the 5-request demo | `python demo.py` |
+| [logs/eval_results.md](logs/eval_results.md) | 13 test cases × 3 runs: input, criteria, result | `python evaluate.py --runs 3` |
+| [logs/eval_results_before_fix.md](logs/eval_results_before_fix.md) | The first evaluation run, which found the empty-plan bug | `python evaluate.py --runs 2` (before the fix) |
+| [logs/specialization_comparison.md](logs/specialization_comparison.md) | Baseline vs. few-shot house-rules prompt | `python compare_prompts.py --runs 3` |
+| [logs/rag_comparison.md](logs/rag_comparison.md) | Planning with vs. without retrieved care notes | `python compare_rag.py --runs 3` |
+
+## 3. How I used an AI coding assistant to build this project
+
+**Assistant used:** Claude Code (Claude Opus 5.5) in VS Code. I worked through the project one step
+at a time: I asked for a step, reviewed what it built and the test or live results, made the
+decisions, and then had it commit and push to `main`.
+
+| Step | What I asked for | What the assistant did | What I decided or changed |
+|---|---|---|---|
+| Planning | Go through the requirements and rubric, map them to my Module 2 code | Read the codebase, ran the 92 existing tests, mapped every rubric item to a file, found repo problems (deleted `architecture.mmd`, no `.gitignore`, untracked code) | I asked for the easiest design that still earns every point; it proposed a plan → check → fix agent that reuses my Scheduler as the checker |
+| 1. Clean-up | Fix the repo problems | Restored the diagram, added `.gitignore`, committed the base project | I told it to always commit to `main` and push after every step, not to use a feature branch |
+| 2. LLM client | Connect Claude | `llm_client.py` with a real client and a `FakeLLM` for offline tests, logging, `.env.example` | I chose Claude Haiku 5.5 over Opus for cost and speed; I asked for much more detailed commit messages, and it rewrote the commit |
+| 3. Agent | Build the AI feature | `ai_planner.py` + `prompts.py`; ran it live | The first design idea, a full tool-calling agent, was scaled down to a JSON plan → check → fix loop |
+| 4. Specialization | Few-shot house rules | `house_rules.py`, `compare_prompts.py`; live comparison | Measured 73% → 100% rule compliance; found that the baseline wrongly refused a heart-pill request |
+| 5. UI and demo | Put it in the app | Streamlit AI Planner with Approve/Reject, `demo.py`; drove the app headlessly | Nothing is saved until I approve, so a person always checks the AI's plan |
+| 6. Evaluation | Test reliability | `evaluate.py`; its first run found a real bug (an empty plan read as "nothing to plan") | Reviewed the fix and the measurement that cut wasted retries from 2 to 1 |
+| 7. RAG | Retrieval bonus | `knowledge/` notes, `retriever.py`, `compare_rag.py` | Measured 33% → 100% of plans following the relevant care note |
+| 8. Write-up | Diagram, README, model card, this file | Drafted all four from the real code and logs | I reviewed and edited the reflections (see `model_card.md`) |
+
+The accepted and rejected suggestions, and what I learned from working this way, are in
+[model_card.md](model_card.md#ai-collaboration).
+
+---
+
+## Appendix: Module 2 AI interactions (original PawPal+)
+
+### Agent Workflow (SF7)
 
 > Document your experience using an AI agent (e.g., Cursor Agent, Claude, Copilot) to make multi-step changes autonomously.
 
@@ -47,7 +144,7 @@ It picked **next available slot** because it builds on the conflict detection I 
 
 ---
 
-## Prompt Comparison (SF11)
+### Prompt Comparison (SF11)
 
 > Compare two different prompts (or two different models) on the same task.
 
@@ -67,7 +164,7 @@ catch-up occurrences, explain the complexity, and propose edge-case tests.
 | **Problems noticed** | It was more verbose than needed, repeated the same algorithm in two equivalent implementations, and called it a “single-expression form” even though its main function used a conditional assignment. These were presentation issues rather than correctness problems. | It did not include a general invariant test or verify the exact return type. Its explanation of Python date arithmetic was also less precise, so the tests carried more of the justification. These omissions did not make the algorithm incorrect. |
 | **Decision** | **Selected as the primary explanation** because the invariant test gives the strongest reusable verification and the calendar reasoning is precise. | **Kept as supporting evidence** because its focused examples make the rule easy to understand, but it did not add a stronger algorithm than Option A. |
 
-### Why this task is algorithmically interesting
+#### Why this task is algorithmically interesting
 
 Weekly recurrence sounds like simply adding seven days, but the date from which
 those seven days are counted matters. Counting from the completion date every
@@ -103,7 +200,7 @@ This operation has constant time and space complexity, or `O(1)`, because it
 always performs one date comparison and one date addition regardless of how
 early or late the task was completed.
 
-### Detailed evaluation of Option A: Claude Sonnet 5
+#### Detailed evaluation of Option A: Claude Sonnet 5
 
 Claude first wrote the rule as two branches: use the original due date when the
 task is early or on time, and use the completion date when it is late. It then
@@ -133,7 +230,7 @@ also described the solution as a single expression but used a separate
 conditional assignment in its main example. This did not affect correctness,
 but it made the answer longer and slightly less consistent than necessary.
 
-### Detailed evaluation of Option B: Gemini 3.8 Flash
+#### Detailed evaluation of Option B: Gemini 3.8 Flash
 
 Gemini reached the same rule independently. It called the chosen date the
 "anchor date" and clearly explained that an early or on-time task stays anchored
@@ -153,7 +250,7 @@ valid pair of dates. It also did not test that the function returns a
 `datetime.date` rather than a timestamp. Finally, it said Python handles
 calendar boundaries but did not explain why as precisely as Claude did.
 
-### Direct comparison
+#### Direct comparison
 
 Both models produced the correct algorithm, so the decision was not based on
 different output dates. Instead, I compared how well each response justified

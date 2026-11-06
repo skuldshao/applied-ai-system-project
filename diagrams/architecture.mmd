@@ -1,3 +1,62 @@
 flowchart TD
-    %% Starter template: replace this placeholder with the actual system design.
-    System["System architecture to be defined"]
+    %% PawPal+ AI Planner: system architecture.
+    %% Matches ai_planner.plan_request() step by step; file names are the real modules.
+
+    subgraph IN["Input"]
+        U["👤 Owner types a request<br/>Streamlit app.py · demo.py"]
+        DATA[("data.json<br/>owner, pets, tasks")]
+        KB[("knowledge/*.md<br/>15 tagged care notes<br/>dogs · cats · medication")]
+    end
+
+    subgraph AGENT["AI Planner agent · ai_planner.plan_request()"]
+        G{"🛡️ Guard<br/>check_request()"}
+        R["📚 Retrieve · retriever.py<br/>filter by pet species + life stage,<br/>rank by TF-IDF, top 3"]
+        P["🧠 Plan / Revise<br/>Claude Haiku 5.5 via llm_client.py<br/>JSON schema + house-rules few-shot prompt"]
+        V["✅ Validate<br/>every task through Task(), pet must exist"]
+        C["🔍 Check · Scheduler on a copy<br/>find_conflicts · time budget ·<br/>find_next_available_slot hints"]
+        DEC{"🤔 Decide<br/>problems left?"}
+        F["🔧 Fix prompt<br/>previous plan + problems + same notes<br/>max 2 rounds · empty plan 1"]
+    end
+
+    subgraph OUT["Output and human review"]
+        RES["🏁 PlanResult<br/>status · tasks · problems ·<br/>confidence · notes · trace"]
+        H{"👤 Owner reviews the plan<br/>Approve or Reject"}
+        A["apply_plan()<br/>tasks added and saved"]
+        M["Message shown<br/>nothing changes"]
+    end
+
+    subgraph LOGS["Logging"]
+        L1["logs/pawpal.log<br/>every step, tokens, latency"]
+        L2["logs/agent_trace.md<br/>step table for each run"]
+    end
+
+    subgraph TEST["Testing and evaluation · developer checks the AI"]
+        T1["pytest · 213 tests<br/>FakeLLM, offline"]
+        T2["evaluate.py · 13 cases × 3 runs<br/>logs/eval_results.md"]
+        T3["compare_prompts.py · compare_rag.py<br/>before vs after reports in logs/"]
+    end
+
+    U --> G
+    DATA -->|"pets and today's schedule (read only)"| AGENT
+    G -->|"blocked: empty, too long,<br/>dose question, no pets"| RES
+    G -->|"passed"| R
+    KB --> R
+    R -->|"care notes"| P
+    P -->|"refuse = true"| RES
+    P -->|"draft tasks (JSON)"| V
+    V --> C
+    C --> DEC
+    DEC -->|"none"| RES
+    DEC -->|"fixable: bad JSON, invalid task,<br/>conflict, empty plan"| F
+    F --> P
+    DEC -->|"owner-only: over budget, unknown pet,<br/>or fix rounds used up"| RES
+    RES -->|"ok or needs_review"| H
+    RES -->|"refused or error"| M
+    H -->|"Approve"| A
+    H -->|"Reject"| M
+    A --> DATA
+    AGENT -.-> L1
+    RES -.-> L2
+    T1 -.-> AGENT
+    T2 -.-> AGENT
+    T3 -.-> AGENT
