@@ -25,7 +25,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from llm_client import LLMClient, LLMError
 from pawpal_system import Owner, Scheduler, Task
-from prompts import PLAN_SCHEMA, SYSTEM_PROMPT, build_fix_prompt, build_plan_prompt
+from prompts import PLAN_SCHEMA, build_fix_prompt, build_plan_prompt, get_system_prompt
 
 logger = logging.getLogger("pawpal.agent")
 
@@ -97,6 +97,7 @@ class PlanResult:
     llm_calls: int = 0
     message: str = ""
     model: str = ""
+    prompt_mode: str = "specialized"  # "specialized" (house rules + examples) or "baseline"
     trace: List[TraceStep] = field(default_factory=list)
 
     @property
@@ -238,6 +239,7 @@ def plan_request(
     client: LLMClient,
     today: Optional[date] = None,
     max_fix_rounds: int = MAX_FIX_ROUNDS,
+    specialized: bool = True,
 ) -> PlanResult:
     """Plan → validate → check → fix, until the plan is clean or only the owner can decide.
 
@@ -247,12 +249,16 @@ def plan_request(
         client: A ClaudeClient, or a FakeLLM in tests.
         today: The day to plan for. Defaults to date.today().
         max_fix_rounds: How many times the model may revise its plan.
+        specialized: True (the default) sends the house rules and few-shot examples;
+            False sends the baseline prompt, for comparison.
 
     Returns:
         A PlanResult with the proposed tasks, any problems left, and the full trace.
     """
     today = today or date.today()
-    result = PlanResult(request=request, model=getattr(client, "model", "unknown"))
+    result = PlanResult(request=request, model=getattr(client, "model", "unknown"),
+                        prompt_mode="specialized" if specialized else "baseline")
+    system_prompt = get_system_prompt(specialized)
 
     def step(icon: str, name: str, detail: str) -> None:
         result.trace.append(TraceStep(icon, name, detail))
@@ -269,7 +275,7 @@ def plan_request(
     prompt = build_plan_prompt(owner, request, today)
     try:
         while True:
-            reply = client.complete(SYSTEM_PROMPT, prompt, PLAN_SCHEMA)
+            reply = client.complete(system_prompt, prompt, PLAN_SCHEMA)
             result.llm_calls += 1
             label = "Plan" if result.fix_rounds == 0 else "Revise"
             try:
@@ -375,7 +381,8 @@ def format_trace(result: PlanResult) -> str:
         f"## {datetime.now():%Y-%m-%d %H:%M} · {icon} {result.status}",
         "",
         f"**Request:** {_cell(result.request)}  ",
-        f"**Model:** {result.model} · **Model calls:** {result.llm_calls} · "
+        f"**Model:** {result.model} · **Prompt:** {result.prompt_mode} · "
+        f"**Model calls:** {result.llm_calls} · "
         f"**Fix rounds:** {result.fix_rounds} · **Confidence:** {result.confidence:.2f}",
         "",
         "| # | Step | What happened |",

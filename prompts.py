@@ -1,14 +1,20 @@
-"""What the AI Planner says to Claude: the system prompt, the JSON schema, and the prompt builders.
+"""What the AI Planner says to Claude: the system prompts, the JSON schema, and the prompt builders.
 
 ai_planner.py owns the logic and this file owns the wording, so prompt versions can be
-compared without touching the agent loop.
+compared without touching the agent loop. There are two system prompts:
+
+- BASELINE_SYSTEM_PROMPT: the reply format and basic rules only.
+- SPECIALIZED_SYSTEM_PROMPT: the baseline plus the PawPal+ house rules (house_rules.py) and
+  three worked few-shot examples. compare_prompts.py measures the difference.
 """
 
 from __future__ import annotations
 
+import json
 from datetime import date
 from typing import Any, Dict, List
 
+from house_rules import rules_text
 from pawpal_system import Owner, Scheduler
 
 # The reply format, enforced by the API (structured outputs). Field order matters: the model
@@ -45,7 +51,7 @@ PLAN_SCHEMA: Dict[str, Any] = {
     "additionalProperties": False,
 }
 
-SYSTEM_PROMPT = """\
+BASELINE_SYSTEM_PROMPT = """\
 You are PawPal+, a planning assistant that turns a pet owner's request into scheduled pet-care tasks.
 
 Reply with JSON that matches the schema:
@@ -61,6 +67,92 @@ medium or high. frequency is once, daily or weekly.
 
 Never invent pets. Avoid times that overlap what is already scheduled today.\
 """
+
+
+def _task(pet: str, description: str, start: str, minutes: int, priority: str, frequency: str):
+    return {"pet_name": pet, "description": description, "start_time": start,
+            "duration_minutes": minutes, "priority": priority, "frequency": frequency}
+
+
+# Worked examples that show the house rules in action. They use made-up pets (Biscuit, Pepper)
+# so the model copies the pattern, not the pets. tests/test_house_rules.py checks that every
+# example follows the house rules, so the examples can't drift from the rules table.
+FEW_SHOT_EXAMPLES: List[Dict[str, Any]] = [
+    {
+        "context": "Pets: Biscuit (dog, age 4). Already scheduled today: nothing yet.",
+        "request": "Feed Biscuit at 7 and 6pm, and give him his allergy pill with breakfast",
+        "reply": {
+            "refuse": False, "refuse_reason": "",
+            "reasoning": "Meals and medication are routine, so they repeat daily with the house "
+                         "durations and high priority. The pill goes right after breakfast so "
+                         "the two don't overlap.",
+            "tasks": [
+                _task("Biscuit", "Breakfast", "07:00", 10, "high", "daily"),
+                _task("Biscuit", "Allergy pill", "07:10", 5, "high", "daily"),
+                _task("Biscuit", "Dinner", "18:00", 10, "high", "daily"),
+            ],
+            "summary": "Biscuit gets breakfast at 7:00 with his allergy pill right after, and "
+                       "dinner at 18:00, every day.",
+            "confidence": 0.95,
+        },
+    },
+    {
+        "context": "Pets: Biscuit (dog, age 4), Pepper (cat, age 2). "
+                   "Already scheduled today: 07:00-07:10 Biscuit: Breakfast.",
+        "request": "Walk Biscuit in the morning and brush Pepper this evening",
+        "reply": {
+            "refuse": False, "refuse_reason": "",
+            "reasoning": "No times or durations were given, so the walk takes the house 30 "
+                         "minutes at 08:00, after breakfast, and brushing takes 15 minutes at "
+                         "18:00. Neither is routine, so both happen once.",
+            "tasks": [
+                _task("Biscuit", "Morning walk", "08:00", 30, "medium", "once"),
+                _task("Pepper", "Brushing", "18:00", 15, "low", "once"),
+            ],
+            "summary": "Biscuit's walk is at 8:00 and Pepper gets brushed at 18:00.",
+            "confidence": 0.85,
+        },
+    },
+    {
+        "context": "Pets: Pepper (cat, age 2). Already scheduled today: nothing yet.",
+        "request": "Clean Pepper's litter box every night at 9 and play with her before that",
+        "reply": {
+            "refuse": False, "refuse_reason": "",
+            "reasoning": "The owner asked for the litter box every night, so it repeats daily "
+                         "at 21:00 for the house 10 minutes. Play takes the house 20 minutes "
+                         "and ends at 20:50, before the litter box.",
+            "tasks": [
+                _task("Pepper", "Playtime", "20:30", 20, "low", "once"),
+                _task("Pepper", "Litter box", "21:00", 10, "low", "daily"),
+            ],
+            "summary": "Pepper plays at 20:30 and her litter box is cleaned at 21:00 every night.",
+            "confidence": 0.9,
+        },
+    },
+]
+
+
+def _examples_text() -> str:
+    parts = []
+    for number, example in enumerate(FEW_SHOT_EXAMPLES, start=1):
+        parts.append(
+            f"Example {number}\n{example['context']}\n"
+            f'Owner\'s request:\n"""\n{example["request"]}\n"""\n'
+            f"Reply:\n{json.dumps(example['reply'])}"
+        )
+    return "\n\n".join(parts)
+
+
+SPECIALIZED_SYSTEM_PROMPT = (
+    f"{BASELINE_SYSTEM_PROMPT}\n\n{rules_text()}\n\n"
+    "Examples (these use made-up pets; only ever plan for the owner's real pets):\n\n"
+    f"{_examples_text()}"
+)
+
+
+def get_system_prompt(specialized: bool = True) -> str:
+    """Return the specialized prompt (house rules + few-shot examples) or the baseline one."""
+    return SPECIALIZED_SYSTEM_PROMPT if specialized else BASELINE_SYSTEM_PROMPT
 
 
 def describe_context(owner: Owner, today: date) -> str:
