@@ -35,7 +35,15 @@ TRACE_FILE = Path(__file__).parent / "logs" / "agent_trace.md"
 
 # Problems the model can fix by revising its plan. The rest (an unknown pet, not enough time)
 # need the owner's decision, so asking the model again would only waste calls.
-FIXABLE_KINDS = {"bad_json", "invalid", "conflict"}
+FIXABLE_KINDS = {"bad_json", "invalid", "conflict", "empty"}
+
+# Found by evaluate.py: when the requested time was taken, the model sometimes dropped the task
+# and returned an empty plan instead of moving it. An empty plan is sent back once (not more:
+# for a pet the owner doesn't have, the model also answers with an empty plan).
+EMPTY_PLAN = ("The plan has no tasks, although the request asks for something. If a requested "
+              "time is already taken, move the task to the nearest free time and say so in the "
+              "summary instead of dropping it. If the request is not about pet care, or is for "
+              "a pet the owner doesn't have, refuse it and say why.")
 
 # A medication-dose question needs both a question about amounts and a medicine word, so
 # "Give Luna her meds at 8" passes while "How much Benadryl can I give Luna?" is blocked.
@@ -97,7 +105,8 @@ class PlanResult:
     llm_calls: int = 0
     message: str = ""
     model: str = ""
-    prompt_mode: str = "specialized"  # "specialized" (house rules + examples) or "baseline"
+    # "specialized" (house rules + examples) or "baseline"
+    prompt_mode: str = "specialized"
     trace: List[TraceStep] = field(default_factory=list)
 
     @property
@@ -171,7 +180,8 @@ def validate_draft(
                 due_date=today,
             )
         except (TypeError, ValueError) as err:
-            problems.append(Problem("invalid", f"'{name}' was rejected: {err}."))
+            problems.append(
+                Problem("invalid", f"'{name}' was rejected: {err}."))
             continue
         proposals.append(ProposedTask(pet.name, task))
     return proposals, problems
@@ -192,7 +202,8 @@ def check_schedule(owner: Owner, proposals: List[ProposedTask], today: date) -> 
     Conflicts only between tasks that already existed are not reported; they aren't this
     plan's fault.
     """
-    trial = Owner.from_dict(owner.to_dict())  # a deep copy; the real owner is never touched
+    trial = Owner.from_dict(
+        owner.to_dict())  # a deep copy; the real owner is never touched
     new_tasks: Dict[int, Task] = {}
     for proposal in proposals:
         copy = replace(proposal.task)
@@ -204,7 +215,8 @@ def check_schedule(owner: Owner, proposals: List[ProposedTask], today: date) -> 
     for (_, a), (_, b) in scheduler.find_conflicts(today):
         if id(a) not in new_tasks and id(b) not in new_tasks:
             continue
-        mover = b if id(b) in new_tasks else a  # suggest moving a new task, never an old one
+        # suggest moving a new task, never an old one
+        mover = b if id(b) in new_tasks else a
         slot = scheduler.find_next_available_slot(
             mover.duration_minutes, earliest=mover.start_time, today=today, ignore=mover)
         hint = (f" The next free slot for '{mover.description}' is {slot:%H:%M}."
@@ -214,8 +226,10 @@ def check_schedule(owner: Owner, proposals: List[ProposedTask], today: date) -> 
             f"'{a.description}' {a.time_window()} overlaps '{b.description}' {b.time_window()}.{hint}"))
 
     planned = scheduler.todays_schedule(today)
-    left = trial.available_minutes - sum(t.duration_minutes for _, t in planned)
-    before = {_key(p.name, t) for p, t in Scheduler(owner).todays_schedule(today)}
+    left = trial.available_minutes - \
+        sum(t.duration_minutes for _, t in planned)
+    before = {_key(p.name, t)
+              for p, t in Scheduler(owner).todays_schedule(today)}
     for pet, task in scheduler.skipped_tasks(today):
         if id(task) in new_tasks:
             problems.append(Problem(
@@ -290,12 +304,15 @@ def plan_request(
             except ValueError as err:
                 step("🧠", label, f"The reply was not usable JSON ({err}).")
                 proposals = []
-                problems = [Problem("bad_json", "Your reply was not valid JSON with a 'tasks' list.")]
+                problems = [
+                    Problem("bad_json", "Your reply was not valid JSON with a 'tasks' list.")]
             else:
                 if draft.get("refuse"):
-                    reason = draft.get("refuse_reason") or "This isn't something PawPal+ can plan."
+                    reason = draft.get(
+                        "refuse_reason") or "This isn't something PawPal+ can plan."
                     step("🛡️", "Model refused", reason)
                     result.status, result.message = "refused", reason
+                    result.tasks, result.problems = [], []  # drop anything from earlier rounds
                     return result
                 result.summary = str(draft.get("summary", ""))
                 result.reasoning = str(draft.get("reasoning", ""))
@@ -304,13 +321,19 @@ def plan_request(
                      f"{len(draft['tasks'])} task(s) drafted, confidence {result.confidence:.2f}. "
                      f"Reasoning: {result.reasoning}")
                 proposals, problems = validate_draft(draft, owner, today)
-                step("✅", "Validate", f"{len(proposals)} task(s) valid, {len(problems)} rejected."
-                     + _list_messages(problems))
-                schedule_problems = check_schedule(owner, proposals, today)
-                problems += schedule_problems
-                step("🔍", "Check", "No conflicts, and everything fits in today's time."
-                     if not schedule_problems
-                     else f"{len(schedule_problems)} issue(s)." + _list_messages(schedule_problems))
+                if draft["tasks"]:
+                    step("✅", "Validate", f"{len(proposals)} task(s) valid, {len(problems)} "
+                         "rejected." + _list_messages(problems))
+                else:
+                    problems.append(Problem("empty", EMPTY_PLAN))
+                    step("✅", "Validate", EMPTY_PLAN)
+                if proposals:  # nothing to check in an empty plan
+                    schedule_problems = check_schedule(owner, proposals, today)
+                    problems += schedule_problems
+                    step("🔍", "Check", "No conflicts, and everything fits in today's time."
+                         if not schedule_problems
+                         else f"{len(schedule_problems)} issue(s)."
+                         + _list_messages(schedule_problems))
 
             result.tasks, result.problems = proposals, problems
             if not problems:
@@ -320,6 +343,10 @@ def plan_request(
                 step("🤔", "Decide", "The remaining problems need the owner's decision, so stop "
                      "and show them instead of asking the model again.")
                 break
+            if result.fix_rounds >= 1 and all(p.kind == "empty" for p in problems):
+                step("🤔", "Decide", "The plan is still empty after asking again, so there is "
+                     "nothing to plan.")
+                break
             if result.fix_rounds >= max_fix_rounds:
                 step("🤔", "Decide", f"Still {len(problems)} problem(s) after {max_fix_rounds} fix "
                      "round(s), so stop and show them to the owner.")
@@ -327,14 +354,16 @@ def plan_request(
             result.fix_rounds += 1
             step("🔧", "Fix", f"Round {result.fix_rounds} of {max_fix_rounds}: {len(fixable)} "
                  "fixable problem(s), so send the plan and the problems back to the model.")
-            prompt = build_fix_prompt(owner, request, reply, [p.message for p in problems], today)
+            prompt = build_fix_prompt(owner, request, reply, [
+                                      p.message for p in problems], today)
     except LLMError as err:
         step("❌", "Error", str(err))
         result.status, result.message = "error", str(err)
         return result
 
-    if not result.tasks and not result.problems:
-        result.status = "refused"
+    if not result.tasks and all(p.kind == "empty" for p in result.problems):
+        # Still empty after the fix rounds (or empty with no fix allowed): nothing to plan.
+        result.status, result.problems = "refused", []
         result.message = "I couldn't find any pet-care tasks in that request."
     else:
         result.status = "ok" if not result.problems else "needs_review"
@@ -357,7 +386,8 @@ def apply_plan(owner: Owner, result: PlanResult) -> int:
         raise ValueError(f"Nothing to apply (status: {result.status}).")
     for proposal in result.tasks:
         owner.find_pet(proposal.pet_name).add_task(proposal.task)
-    logger.info("Applied %d task(s) for request %r", len(result.tasks), result.request)
+    logger.info("Applied %d task(s) for request %r",
+                len(result.tasks), result.request)
     return len(result.tasks)
 
 

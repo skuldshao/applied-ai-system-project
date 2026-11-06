@@ -212,9 +212,29 @@ def test_model_refusal_is_reported(owner):
     assert not result.can_apply
 
 
-def test_empty_plan_is_refused(owner):
-    result = plan_request(owner, "hello", FakeLLM([draft()]), today=TODAY)
+def test_refusal_in_a_fix_round_clears_earlier_problems(owner):
+    fake = FakeLLM([draft(), draft(refuse=True, reason="Rex isn't one of your pets.")])
+    result = plan_request(owner, "Feed Rex at 7am", fake, today=TODAY)
+    assert result.status == "refused" and result.message == "Rex isn't one of your pets."
+    assert result.problems == [] and result.tasks == [] and result.llm_calls == 2
+
+
+def test_empty_plan_is_sent_back_and_then_fixed(owner):
+    # The real failure evaluate.py found: the requested time was taken, so the model dropped
+    # the task. The agent now asks again instead of reporting "nothing to plan".
+    fake = FakeLLM([draft(), draft(task("Brushing", "10:00", 15, pet="Luna", pri="low"))])
+    result = plan_request(owner, "Brush Luna at 9:30am", fake, today=TODAY)
+    assert result.status == "ok" and result.fix_rounds == 1
+    assert "move the task to the nearest free time" in fake.calls[1]["prompt"]
+    assert "Check" not in steps(result)[:3]  # an empty plan skips the schedule check
+
+
+def test_plan_still_empty_after_one_retry_is_refused(owner):
+    fake = FakeLLM([draft()] * (MAX_FIX_ROUNDS + 1))
+    result = plan_request(owner, "Feed Rex at 7am", fake, today=TODAY)
     assert result.status == "refused" and "couldn't find any pet-care tasks" in result.message
+    assert result.problems == [] and result.llm_calls == 2  # one retry only, not MAX_FIX_ROUNDS
+    assert "a pet the owner doesn't have, refuse it" in fake.calls[1]["prompt"]
 
 
 def test_llm_error_becomes_error_status(owner):
